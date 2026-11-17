@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D Multiplayer Obby - Ultimate Edition</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; user-select: none; }
+    #canvas-container { width: 100vw; height: 100vh; display: block; }
+    
+    /* Touch Joystick Styles */
+    #joystick-container {
+      position: absolute;
+      bottom: 80px;
+      left: 40px;
+      width: 120px;
+      height: 120px;
+      background: rgba(255, 255, 255, 0.15);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      touch-action: none;
+      display: none;
+      z-index: 50;
+    }
+    #joystick-knob {
+      position: absolute;
+      top: 35px;
+      left: 35px;
+      width: 50px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.3);
+    }
+    
+    #mobile-jump-btn {
+      position: absolute;
+      bottom: 80px;
+      right: 40px;
+      width: 75px;
+      height: 75px;
+      background: rgba(255, 255, 255, 0.25);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      touch-action: none;
+    }
+    #mobile-swing-btn {
+      position: absolute;
+      bottom: 170px;
+      right: 40px;
+      width: 65px;
+      height: 65px;
+      background: rgba(239, 68, 68, 0.5);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      color: white;
+      font-weight: bold;
+      font-size: 16px;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 50;
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-white">
+
+  <!-- LOGIN & AVATAR SELECTION SCREEN -->
+  <div id="login-screen" class="fixed inset-0 z-50 bg-slate-950 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-8 rounded-3xl max-w-md w-full shadow-2xl flex flex-col gap-6 text-center">
+      <div>
+        <h1 class="text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
+          3D SKY OBBY
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">25 Zig-Zag Stages • Unlimited Jump • Bat Shop</p>
+      </div>
+
+      <div class="flex flex-col gap-2 text-left">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Username</label>
+        <input type="text" id="username-input" placeholder="Enter your name..." value="Player1" class="w-full bg-slate-800 border border-slate-700 px-4 py-3 rounded-xl focus:outline-none focus:border-cyan-500 text-white font-medium">
+      </div>
+
+      <div class="flex flex-col gap-2 text-left">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Choose Avatar</label>
+        <div class="grid grid-cols-2 gap-4">
+          <button id="select-boy" onclick="selectGender('boy')" class="bg-blue-600/20 border-2 border-blue-500 hover:bg-blue-600/40 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all">
+            <span class="text-3xl">👦</span>
+            <span class="font-extrabold text-blue-400">BOY</span>
+          </button>
+          <button id="select-girl" onclick="selectGender('girl')" class="bg-slate-800 border-2 border-slate-700 hover:bg-pink-600/20 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all">
+            <span class="text-3xl">👧</span>
+            <span class="font-extrabold text-slate-400">GIRL</span>
+          </button>
+        </div>
+      </div>
+
+      <button id="start-btn" onclick="startGame()" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-black py-4 rounded-2xl text-lg shadow-lg shadow-cyan-500/25 active:scale-95 transition-all">
+        PLAY NOW 🚀
+      </button>
+    </div>
+  </div>
+
+  <!-- HUD OVERLAY -->
+  <div id="hud" class="fixed top-4 left-4 z-40 flex flex-col gap-2 pointer-events-none hidden">
+    <div class="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3 pointer-events-auto">
+      <span class="text-yellow-400 font-bold text-xl">🪙 <span id="coins-display">200</span> Coins</span>
+    </div>
+    <div class="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3 pointer-events-auto">
+      <span class="text-cyan-400 font-bold">📍 Stage: <span id="stage-display">1</span> / 25</span>
+    </div>
+    <div class="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3 pointer-events-auto">
+      <span class="text-purple-400 font-bold">🏏 Weapon: <span id="weapon-display" class="text-gray-300">Common Bat</span></span>
+    </div>
+  </div>
+
+  <!-- CHAT BOX -->
+  <div id="chat-container" class="fixed bottom-4 left-4 z-40 w-80 flex flex-col gap-2 hidden pointer-events-auto">
+    <div id="chat-messages" class="bg-black/50 backdrop-blur-md border border-white/10 rounded-xl p-3 h-32 overflow-y-auto flex flex-col gap-1 text-xs">
+      <div class="text-cyan-400 font-bold">System: Type /admin panel for admin!</div>
+    </div>
+    <input type="text" id="chat-input" placeholder="Type here to chat or /admin panel..." class="bg-black/70 border border-white/20 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-400">
+  </div>
+
+  <!-- TOP RIGHT BUTTONS -->
+  <div id="top-buttons" class="fixed top-4 right-4 z-40 flex gap-2 hidden">
+    <button id="shop-btn" class="bg-yellow-500 hover:bg-yellow-400 text-black font-extrabold px-5 py-2.5 rounded-xl shadow-lg border border-yellow-300 transition-all transform active:scale-95 flex items-center gap-2">
+      🛒 BAT SHOP
+    </button>
+  </div>
+
+  <!-- BAT SHOP MODAL -->
+  <div id="shop-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="bg-slate-800/90 border border-slate-700 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+      <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50">
+        <h2 class="text-2xl font-black text-yellow-400 flex items-center gap-2">🛒 WEAPON SHOP</h2>
+        <div class="flex items-center gap-4">
+          <span class="text-yellow-400 font-bold text-lg">🪙 <span id="shop-coins-display">200</span></span>
+          <button id="close-shop-btn" class="text-gray-400 hover:text-white font-bold text-2xl px-2">&times;</button>
+        </div>
+      </div>
+      <div id="bat-list" class="p-4 overflow-y-auto grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+    </div>
+  </div>
+
+  <!-- MOBILE CONTROLS -->
+  <div id="joystick-container">
+    <div id="joystick-knob"></div>
+  </div>
+  <button id="mobile-jump-btn">JUMP</button>
+  <button id="mobile-swing-btn">BAT</button>
+
+  <!-- 3D CANVAS CONTAINER -->
+  <div id="canvas-container"></div>
+
+  <script>
+    // --- WEAPON CONFIGURATION ---
+    const BATS = [
+      { id: 'common', name: 'Common Bat', cost: 0, color: 0x9ca3af, knockback: 10, rarity: 'Common' },
+      { id: 'uncommon', name: 'Uncommon Bat', cost: 100, color: 0x22c55e, knockback: 15, rarity: 'Uncommon' },
+      { id: 'rare', name: 'Rare Bat', cost: 350, color: 0x3b82f6, knockback: 22, rarity: 'Rare' },
+      { id: 'legendary', name: 'Legendary Bat', cost: 800, color: 0xeab308, knockback: 30, rarity: 'Legendary' },
+      { id: 'mythic', name: 'Mythic Bat', cost: 1800, color: 0xa855f7, knockback: 40, rarity: 'Mythic' },
+      { id: 'sacred', name: 'Sacred Bat', cost: 4000, color: 0x06b6d4, knockback: 55, rarity: 'Sacred' },
+      { id: 'eternal', name: 'Eternal Bat', cost: 9000, color: 0xf43f5e, knockback: 75, rarity: 'Eternal' },
+      { id: 'divine', name: 'Divine Bat', cost: 20000, color: 0xffffff, knockback: 100, rarity: 'Divine' }
+    ];
+
+    let playerCoins = 200;
+    let ownedBats = ['common'];
+    let equippedBat = BATS[0];
+    let selectedGender = 'boy';
+    let playerName = 'Player1';
+
+    window.selectGender = function(gender) {
+      selectedGender = gender;
+      const boyBtn = document.getElementById('select-boy');
+      const girlBtn = document.getElementById('select-girl');
+
+      if (gender === 'boy') {
+        boyBtn.className = "bg-blue-600/20 border-2 border-blue-500 text-blue-400 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all";
+        girlBtn.className = "bg-slate-800 border-2 border-slate-700 text-slate-400 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all";
+      } else {
+        girlBtn.className = "bg-pink-600/20 border-2 border-pink-500 text-pink-400 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all";
+        boyBtn.className = "bg-slate-800 border-2 border-slate-700 text-slate-400 p-4 rounded-2xl flex flex-col items-center gap-2 transition-all";
+      }
+    };
+
+    // --- THREE.JS ENGINE SETUP ---
+    const container = document.getElementById('canvas-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x0f172a);
+    scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+    scene.add(ambientLight);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    dirLight.position.set(20, 50, 20);
+    dirLight.castShadow = true;
+    scene.add(dirLight);
+
+    // --- PLAYER AVATAR ---
+    const playerGroup = new THREE.Group();
+    scene.add(playerGroup);
+
+    let bodyMesh, headMesh, batMeshMat, batGroup;
+
+    function buildAvatar() {
+      while(playerGroup.children.length > 0){ playerGroup.remove(playerGroup.children[0]); }
+
+      const bodyColor = (selectedGender === 'boy') ? 0x2563eb : 0xec4899;
+      bodyMesh = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.2, 0.4), new THREE.MeshStandardMaterial({ color: bodyColor }));
+      bodyMesh.position.y = 0.6;
+      playerGroup.add(bodyMesh);
+
+      headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({ color: 0xffdbac }));
+      headMesh.position.y = 1.5;
+      playerGroup.add(headMesh);
+
+      const hairColor = (selectedGender === 'boy') ? 0x451a03 : 0xfacc15;
+      const hairMesh = new THREE.Mesh(new THREE.BoxGeometry(0.64, 0.25, 0.64), new THREE.MeshStandardMaterial({ color: hairColor }));
+      hairMesh.position.y = 1.85;
+      playerGroup.add(hairMesh);
+
+      batGroup = new THREE.Group();
+      batMeshMat = new THREE.MeshStandardMaterial({ color: equippedBat.color, roughness: 0.3, metalness: 0.4 });
+      const batMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 1.4, 12), batMeshMat);
+      batMesh.position.set(0, 0.7, 0.4);
+      batMesh.rotation.x = Math.PI / 3;
+      batGroup.add(batMesh);
+      batGroup.position.set(0.5, 0.8, 0);
+      playerGroup.add(batGroup);
+    }
+
+    // --- BUILD 25 ZIG-ZAG OBBY STAGES ---
+    const stages = [];
+    const coinsList = [];
+
+    function buildObbyStages() {
+      let currentX = 0;
+      let currentZ = 0;
+      let currentY = 0;
+
+      for (let i = 1; i <= 25; i++) {
+        const platformGeom = new THREE.BoxGeometry(4, 0.8, 4);
+        const isCheckpoint = (i % 5 === 0);
+        const platformMat = new THREE.MeshStandardMaterial({ 
+          color: isCheckpoint ? 0x22c55e : (i % 2 === 0 ? 0x3b82f6 : 0x64748b) 
+        });
+        const platform = new THREE.Mesh(platformGeom, platformMat);
+        
+        currentZ -= 7;
+        currentY += 1.5;
+        if (i % 2 === 1) currentX += (i % 4 === 1 ? 3 : -3);
+
+        platform.position.set(currentX, currentY, currentZ);
+        scene.add(platform);
+        stages.push({ stage: i, position: platform.position.clone() });
+
+        if (i % 2 === 0) {
+          const coin = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16),
+            new THREE.MeshStandardMaterial({ color: 0xeab308, metalness: 0.8 })
+          );
+          coin.rotation.x = Math.PI / 2;
+          coin.position.set(currentX, currentY + 1.8, currentZ);
+          scene.add(coin);
+          coinsList.push(coin);
+        }
+      }
+    }
+    buildObbyStages();
+
+    let currentStage = 1;
+    let velocity = new THREE.Vector3();
+    let isSwinging = false;
+    let swingProgress = 0;
+
+    function respawnPlayer() {
+      const targetStage = stages[currentStage - 1];
+      playerGroup.position.copy(targetStage.position).add(new THREE.Vector3(0, 2, 0));
+      velocity.set(0, 0, 0);
+    }
+
+    window.startGame = function() {
+      const nameInput = document.getElementById('username-input').value.trim();
+      if (nameInput) playerName = nameInput;
+
+      buildAvatar();
+      respawnPlayer();
+      document.getElementById('login-screen').classList.add('hidden');
+      document.getElementById('hud').classList.remove('hidden');
+      document.getElementById('top-buttons').classList.remove('hidden');
+      document.getElementById('chat-container').classList.remove('hidden');
+      updateShopUI();
+    };
+
+    // --- CHAT SYSTEM ---
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+
+    chatInput.addEventListener('keydown', (e) => {
+      e.stopPropagation(); // prevent game key capture while typing
+      if (e.code === 'Enter') {
+        const text = chatInput.value.trim();
+        if (!text) return;
+
+        if (text === '/admin' || text === '/admin panel') {
+          playerCoins += 10000;
+          updateShopUI();
+          appendChat("System", "👑 Admin granted! +10,000 Coins added.", "#06b6d4");
+        } else {
+          appendChat(playerName, text, "#ffffff");
+        }
+        chatInput.value = '';
+      }
+    });
+
+    function appendChat(sender, msg, color = "#cbd5e1") {
+      const div = document.createElement('div');
+      div.innerHTML = `<span class="font-bold" style="color: ${color}">${sender}:</span> ${msg}`;
+      chatMessages.appendChild(div);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // --- CONTROLS ---
+    const keys = {};
+    window.addEventListener('keydown', (e) => {
+      if (document.activeElement === chatInput) return;
+      keys[e.code] = true;
+      if (e.code === 'Space') velocity.y = 10;
+      if (e.code === 'KeyF' || e.code === 'KeyE') triggerBatSwing();
+    });
+    window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+
+    // Joystick & Touch
+    const joystickContainer = document.getElementById('joystick-container');
+    const joystickKnob = document.getElementById('joystick-knob');
+    const mobileJumpBtn = document.getElementById('mobile-jump-btn');
+    const mobileSwingBtn = document.getElementById('mobile-swing-btn');
+    let joystickVector = { x: 0, y: 0 };
+
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+      joystickContainer.style.display = 'block';
+      mobileJumpBtn.style.display = 'flex';
+      mobileSwingBtn.style.display = 'flex';
+    }
+
+    let touchId = null, startX = 0, startY = 0;
+    joystickContainer.addEventListener('touchstart', (e) => {
+      const touch = e.touches[0];
+      touchId = touch.identifier;
+      const rect = joystickContainer.getBoundingClientRect();
+      startX = rect.left + rect.width / 2;
+      startY = rect.top + rect.height / 2;
+    });
+
+    joystickContainer.addEventListener('touchmove', (e) => {
+      for (let touch of e.touches) {
+        if (touch.identifier === touchId) {
+          const dx = touch.clientX - startX;
+          const dy = touch.clientY - startY;
+          const dist = Math.min(Math.hypot(dx, dy), 40);
+          const angle = Math.atan2(dy, dx);
+          joystickKnob.style.transform = `translate(${Math.cos(angle)*dist}px, ${Math.sin(angle)*dist}px)`;
+          joystickVector.x = (Math.cos(angle)*dist) / 40;
+          joystickVector.y = (Math.sin(angle)*dist) / 40;
+        }
+      }
+    });
+
+    const resetJoystick = () => {
+      joystickKnob.style.transform = `translate(0px, 0px)`;
+      joystickVector = { x: 0, y: 0 };
+      touchId = null;
+    };
+    joystickContainer.addEventListener('touchend', resetJoystick);
+    joystickContainer.addEventListener('touchcancel', resetJoystick);
+    mobileJumpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); velocity.y = 10; });
+    mobileSwingBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerBatSwing(); });
+
+    function triggerBatSwing() {
+      if (!isSwinging) {
+        isSwinging = true;
+        swingProgress = 0;
+      }
+    }
+
+    // --- SHOP ---
+    const shopModal = document.getElementById('shop-modal');
+    document.getElementById('shop-btn').onclick = () => shopModal.classList.remove('hidden');
+    document.getElementById('close-shop-btn').onclick = () => shopModal.classList.add('hidden');
+
+    function updateShopUI() {
+      document.getElementById('coins-display').textContent = playerCoins;
+      document.getElementById('shop-coins-display').textContent = playerCoins;
+      document.getElementById('stage-display').textContent = currentStage;
+      document.getElementById('weapon-display').textContent = equippedBat.name;
+
+      const batListContainer = document.getElementById('bat-list');
+      batListContainer.innerHTML = '';
+      BATS.forEach((bat) => {
+        const isOwned = ownedBats.includes(bat.id);
+        const isEquipped = equippedBat.id === bat.id;
+
+        const card = document.createElement('div');
+        card.className = "bg-slate-700/60 p-3 rounded-xl border border-slate-600 flex flex-col justify-between gap-2";
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="font-black text-lg" style="color: #${bat.color.toString(16).padStart(6, '0')}">${bat.name}</span>
+            <span class="text-xs px-2 py-0.5 rounded font-bold bg-black/40 text-gray-300">${bat.rarity}</span>
+          </div>
+          <div class="text-xs text-gray-300">⚡ Knockback: <span class="text-yellow-400 font-bold">${bat.knockback}</span></div>
+          <div class="mt-1">
+            ${isEquipped 
+              ? `<button disabled class="w-full bg-cyan-600 text-white text-xs font-bold py-2 rounded-lg cursor-default">EQUIPPED</button>`
+              : isOwned 
+                ? `<button onclick="equipBat('${bat.id}')" class="w-full bg-green-600 hover:bg-green-500 text-white text-xs font-bold py-2 rounded-lg">EQUIP</button>`
+                : `<button onclick="buyBat('${bat.id}')" class="w-full bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black py-2 rounded-lg">BUY (🪙 ${bat.cost})</button>`
+            }
+          </div>
+        `;
+        batListContainer.appendChild(card);
+      });
+    }
+
+    window.buyBat = (id) => {
+      const bat = BATS.find(b => b.id === id);
+      if (bat && playerCoins >= bat.cost) {
+        playerCoins -= bat.cost;
+        ownedBats.push(bat.id);
+        equippedBat = bat;
+        if (batMeshMat) batMeshMat.color.setHex(bat.color);
+        updateShopUI();
+      } else {
+        alert("Not enough coins!");
+      }
+    };
+
+    window.equipBat = (id) => {
+      const bat = BATS.find(b => b.id === id);
+      if (bat) {
+        equippedBat = bat;
+        if (batMeshMat) batMeshMat.color.setHex(bat.color);
+        updateShopUI();
+      }
+    };
+
+    // --- GAME LOOP ---
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const delta = clock.getDelta();
+
+      let moveX = 0, moveZ = 0;
+      if (document.activeElement !== chatInput) {
+        if (keys['KeyW'] || keys['ArrowUp']) moveZ -= 1;
+        if (keys['KeyS'] || keys['ArrowDown']) moveZ += 1;
+        if (keys['KeyA'] || keys['ArrowLeft']) moveX -= 1;
+        if (keys['KeyD'] || keys['ArrowRight']) moveX += 1;
+      }
+
+      moveX += joystickVector.x;
+      moveZ += joystickVector.y;
+
+      const speed = 8;
+      playerGroup.position.x += moveX * speed * delta;
+      playerGroup.position.z += moveZ * speed * delta;
+
+      velocity.y -= 25 * delta;
+      playerGroup.position.y += velocity.y * delta;
+
+      stages.forEach((stg) => {
+        const dx = Math.abs(playerGroup.position.x - stg.position.x);
+        const dz = Math.abs(playerGroup.position.z - stg.position.z);
+        if (dx < 2.2 && dz < 2.2 && playerGroup.position.y <= stg.position.y + 0.8 && playerGroup.position.y >= stg.position.y) {
+          playerGroup.position.y = stg.position.y + 0.8;
+          velocity.y = 0;
+          if (stg.stage > currentStage) {
+            currentStage = stg.stage;
+            playerCoins += 25;
+            updateShopUI();
+          }
+        }
+      });
+
+      if (playerGroup.position.y < -15) respawnPlayer();
+
+      coinsList.forEach((coin, idx) => {
+        coin.rotation.z += 2 * delta;
+        if (playerGroup.position.distanceTo(coin.position) < 1.2) {
+          scene.remove(coin);
+          coinsList.splice(idx, 1);
+          playerCoins += 50;
+          updateShopUI();
+        }
+      });
+
+      if (isSwinging && batGroup) {
+        swingProgress += delta * 12;
+        batGroup.rotation.y = Math.sin(swingProgress) * 1.8;
+        if (swingProgress >= Math.PI) {
+          isSwinging = false;
+          batGroup.rotation.y = 0;
+        }
+      }
+
+      camera.position.x = playerGroup.position.x;
+      camera.position.y = playerGroup.position.y + 5;
+      camera.position.z = playerGroup.position.z + 10;
+      camera.lookAt(playerGroup.position.x, playerGroup.position.y + 1, playerGroup.position.z);
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
+</body>
+</html>
